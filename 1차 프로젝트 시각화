@@ -1,0 +1,43 @@
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from matplotlib import font_manager, rc
+
+
+font_path = "C:/Windows/Fonts/malgun.ttf"
+font = font_manager.FontProperties(fname=font_path).get_name()
+rc('font', family=font)
+
+# 데이터 로드
+data = pd.read_csv('충전량.csv')
+
+# 날짜 및 시간 형식 변환
+data['충전일'] = pd.to_datetime(data['충전일'])
+data['충전시작시간'] = pd.to_datetime(data['충전시작시간'], format='%Y-%m-%d %H:%M:%S')
+data['충전종료시간'] = pd.to_datetime(data['충전종료시간'], format='%Y-%m-%d %H:%M:%S')
+
+# 충전 시간 계산 (단위: 시간)
+data['충전시간(시간)'] = (data['충전종료시간'] - data['충전시작시간']).dt.total_seconds() / 3600
+
+# 충전량을 시간대별로 집계하기 위해 '충전시작시간'의 시간만 추출
+data['시작시간대'] = data['충전시작시간'].dt.hour
+
+# 충전량을 시간대별로 집계 (각 시간대에 대한 충전량 합산)
+time_grouped_data = data.groupby('시작시간대').agg({'충전량(kWh)': 'sum'}).reset_index()
+
+# 데이터 확인
+print(time_grouped_data.head())
+
+# 시각화
+plt.figure(figsize=(12, 6))
+sns.lineplot(data=time_grouped_data, x='시작시간대', y='충전량(kWh)', marker='o')
+plt.title('시간대별 충전량')
+plt.xlabel('충전 시작 시간대')
+plt.ylabel('충전량 (kWh)')
+plt.xticks(range(24))  # 시간대는 0~23까지 표시
+plt.grid(True)
+plt.tight_layout()
+
+
+
+plt.show()
