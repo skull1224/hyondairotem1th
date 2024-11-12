@@ -1,0 +1,29 @@
+from dotenv import load_dotenv
+from langchain_openai import OpenAI, ChatOpenAI
+import streamlit as st
+from PIL import Image
+
+load_dotenv()
+
+st.title("사진 요약 보고서 작성")
+
+uploaded_image = st.file_uploader("이미지를 업로드하세요", type=["jpg", "jpeg", "png"])
+
+if uploaded_image:
+    # 업로드된 이미지 표시
+    image = Image.open(uploaded_image)
+    st.image(image, caption="업로드된 이미지")
+
+    # 이미지 인식 모델을 통해 얻은 이미지 설명 텍스트 사용
+    # 예를 들어, "산과 구름이 보이는 일출 장면"과 같은 설명이 있다고 가정합니다.
+
+    # 임시로 감지된 설명 텍스트 (실제 이미지 인식 결과로 대체 가능)
+    detected_description = "꼼딱핑이 순찰을 하고 있어"
+
+    # 언어 모델을 사용하여 요약 생성
+    llm = OpenAI()
+    result = llm(f"이 장면을 요약해 주세요: {detected_description}")
+
+    # 생성된 요약 표시
+    st.write("요약:")
+    st.write(result)
