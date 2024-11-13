@@ -1,0 +1,68 @@
+import cv2
+import requests
+import base64
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import padding
+from os import urandom
+import json
+
+def encode_image(image_data):
+    return base64.b64encode(image_data).decode("utf-8")
+
+def generate_aes_key_iv():
+    key = urandom(32)  # AES-256 키 생성
+    iv = urandom(16)  # 초기화 벡터 생성
+    return key, iv
+
+
+def encrypt_data(data, key, iv):
+    # 패딩 적용
+    padder = padding.PKCS7(128).padder()
+    padded_data = padder.update(data) + padder.finalize()
+
+    # AES 암호화
+    cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
+    encryptor = cipher.encryptor()
+    encrypted_data = encryptor.update(padded_data) + encryptor.finalize()
+    return base64.b64encode(encrypted_data).decode()
+
+
+# 카메라로 이미지 캡처
+cap = cv2.VideoCapture(0)
+ret, frame = cap.read()
+
+if ret:
+    # 이미지를 JPEG 형식으로 인코딩
+    _, buffer = cv2.imencode('.jpg', frame)
+    img_data = buffer.tobytes()
+
+    # AES 키와 IV 생성 및 데이터 암호화
+    key, iv = generate_aes_key_iv()
+    encrypted_data = encrypt_data(img_data, key, iv)
+
+    # 전송할 패킷 구성
+    packet = json.dumps({
+        "encrypted_data": encrypted_data,
+        "iv": base64.b64encode(iv).decode()
+    })
+
+    # Streamlit 서버 URL
+    streamlit_url = "http://127.0.0.1:8502/upload"
+
+    # 요청 전송
+    img_base64 = encode_image(img_data)
+
+    response = requests.post(streamlit_url, json={
+        "image": img_base64,
+        "key": base64.b64encode(key).decode("utf-8")
+    })
+    if response.status_code == 200:
+        print("Encryption and transmission successful")
+    else:
+        print("Failed to send encrypted data")
+        print("Response:", response.text)
+else:
+    print("Failed to capture image")
+
+cap.release()
